@@ -13,10 +13,9 @@ WORKDIR /app
 RUN sed -i "s/node_modules\\\\youtube-dl\\\\bin\\\\youtube-dl/node_modules\\\\youtube-dl\\\\bin\\\\yt-dlp/g" /app/app.js \
     && sed -i "s/command: 'youtube-dl'/command: 'yt-dlp'/g" /app/app.js
 
-# Replace the old downloader executable
-RUN rm -f /app/node_modules/youtube-dl/bin/youtube-dl \
-    && printf '#!/bin/sh\nexec /usr/local/bin/yt-dlp \"\$@\"\n' \
-       > /app/node_modules/youtube-dl/bin/youtube-dl \
-    && chmod +x /app/node_modules/youtube-dl/bin/youtube-dl
+RUN rm -rf /app/node_modules/youtube-dl \
+ && mkdir -p /app/node_modules/youtube-dl/bin \
+ && printf '#!/bin/sh\nexec /usr/local/bin/yt-dlp "$@"\n' > /app/node_modules/youtube-dl/bin/youtube-dl \
+ && chmod +x /app/node_modules/youtube-dl/bin/youtube-dl
 
 RUN yt-dlp --version
