@@ -48,4 +48,3 @@ RUN sed -i "s/require('youtube-dl')/require('.\\/yt-dlp-wrapper')/g" \
 # Verify yt-dlp exists
 RUN yt-dlp --version
 
-USER node
