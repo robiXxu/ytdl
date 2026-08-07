@@ -19,19 +19,35 @@ const binary = '/app/appdata/bin/yt-dlp';
 function exec(url, args, options, callback) {
     execFile(
         binary,
-        [...args, url],
+        args.concat(url),
         options,
-        callback
+        (err, stdout, stderr) => {
+            if (err) {
+                callback(err, stdout);
+                return;
+            }
+
+            try {
+                const json = JSON.parse(stdout);
+
+                // youtube-dl npm module compatibility
+                if (json.format_id === undefined && json.formats) {
+                    json.format_id = json.format_id || json.formats
+                        .map(f => f.format_id)
+                        .filter(Boolean)
+                        .join('+');
+                }
+
+                callback(null, JSON.stringify(json));
+            } catch {
+                callback(null, stdout);
+            }
+        }
     );
 }
 
 function getInfo(url, args, callback) {
-    execFile(
-        binary,
-        ['--dump-json', ...args, url],
-        { maxBuffer: Infinity },
-        callback
-    );
+    exec(url, ['-j', ...args], { maxBuffer: Infinity }, callback);
 }
 
 module.exports = {
