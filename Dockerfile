@@ -9,6 +9,13 @@ RUN apt-get update \
 
 WORKDIR /app
 
+
+# Replace hardcoded youtube-dl command with yt-dlp
+RUN sed -i "s/command: 'youtube-dl'/command: 'yt-dlp'/g" /app/app.js
+
+# Replace default details path
+RUN sed -i 's#node_modules\\\\youtube-dl\\\\bin\\\\youtube-dl.exe#/usr/local/bin/yt-dlp#g' /app/app.js
+
 # Remove old npm youtube-dl package
 RUN npm uninstall youtube-dl
 
