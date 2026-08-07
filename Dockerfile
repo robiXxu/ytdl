@@ -7,10 +7,9 @@ RUN apt-get update \
     && pip3 install --no-cache-dir -U yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
-# Replace youtube-dl binary with yt-dlp wrapper
-RUN rm -f /app/node_modules/youtube-dl/bin/youtube-dl \
-    && ln -s /usr/local/bin/yt-dlp /app/node_modules/youtube-dl/bin/youtube-dl
+RUN cat > /app/node_modules/youtube-dl/bin/youtube-dl <<'EOF'
+#!/bin/sh
+exec /usr/local/bin/yt-dlp "$@"
+EOF
 
-# Verify installation
-RUN yt-dlp --version
-
+RUN chmod +x /app/node_modules/youtube-dl/bin/youtube-dl
