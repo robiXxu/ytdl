@@ -12,4 +12,3 @@ RUN apt-get update \
 # Verify installation
 RUN yt-dlp --version
 
-USER node
