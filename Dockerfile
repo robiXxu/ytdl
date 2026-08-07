@@ -9,17 +9,14 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# Patch the hardcoded downloader command
+RUN sed -i "s/node_modules\\\\youtube-dl\\\\bin\\\\youtube-dl/node_modules\\\\youtube-dl\\\\bin\\\\yt-dlp/g" /app/app.js \
+    && sed -i "s/command: 'youtube-dl'/command: 'yt-dlp'/g" /app/app.js
 
-# Replace hardcoded youtube-dl command with yt-dlp
-RUN sed -i "s/command: 'youtube-dl'/command: 'yt-dlp'/g" /app/app.js
-
-# Replace default details path
-RUN sed -i 's#node_modules\\\\youtube-dl\\\\bin\\\\youtube-dl.exe#/usr/local/bin/yt-dlp#g' /app/app.js
-
-# Remove old npm youtube-dl package
-RUN npm uninstall youtube-dl
-
-# Install yt-dlp node wrapper
-RUN npm install yt-dlp
+# Replace the old downloader executable
+RUN rm -f /app/node_modules/youtube-dl/bin/youtube-dl \
+    && printf '#!/bin/sh\nexec /usr/local/bin/yt-dlp \"\$@\"\n' \
+       > /app/node_modules/youtube-dl/bin/youtube-dl \
+    && chmod +x /app/node_modules/youtube-dl/bin/youtube-dl
 
 RUN yt-dlp --version
