@@ -2,6 +2,7 @@ FROM tzahi12345/youtubedl-material:latest
 
 USER root
 
+# Install yt-dlp and create a stable binary path
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3-pip \
     && pip3 install --no-cache-dir yt-dlp \
@@ -9,31 +10,42 @@ RUN apt-get update \
     && ln -sf /usr/local/bin/yt-dlp /app/appdata/bin/yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 - <<'PY'
-from pathlib import Path
+# Add yt-dlp compatibility wrapper for the old youtube-dl npm API
+RUN cat > /app/yt-dlp-wrapper.js <<'EOF'
+const { execFile } = require('child_process');
 
-p = Path("/app/app.js")
-s = p.read_text()
+const binary = '/app/appdata/bin/yt-dlp';
 
-old = "const youtubedl = require('youtube-dl');"
+function exec(url, args, options, callback) {
+    execFile(
+        binary,
+        [...args, url],
+        options,
+        callback
+    );
+}
 
-new = """const { execFile } = require('child_process');
+function getInfo(url, args, callback) {
+    execFile(
+        binary,
+        ['--dump-json', ...args, url],
+        { maxBuffer: Infinity },
+        callback
+    );
+}
 
-const youtubedl = {
-    exec: function(url, args, options, callback) {
-        execFile(
-            '/app/appdata/bin/yt-dlp',
-            [...args, url],
-            options,
-            callback
-        );
-    }
-};"""
+module.exports = {
+    exec,
+    getInfo
+};
+EOF
 
-if old not in s:
-    raise Exception("old youtube-dl import not found")
+# Replace old youtube-dl npm module usage
+RUN sed -i "s/require('youtube-dl')/require('.\\/yt-dlp-wrapper')/g" \
+    /app/downloader.js \
+    /app/subscriptions.js
 
-p.write_text(s.replace(old, new))
-PY
-
+# Verify yt-dlp exists
 RUN yt-dlp --version
+
+USER node
