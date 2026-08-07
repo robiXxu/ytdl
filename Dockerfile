@@ -7,15 +7,28 @@ RUN apt-get update \
     && pip3 install --no-cache-dir -U yt-dlp \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+RUN python3 - <<'PY'
+from pathlib import Path
 
-# Patch the hardcoded downloader command
-RUN sed -i "s/node_modules\\\\youtube-dl\\\\bin\\\\youtube-dl/node_modules\\\\youtube-dl\\\\bin\\\\yt-dlp/g" /app/app.js \
-    && sed -i "s/command: 'youtube-dl'/command: 'yt-dlp'/g" /app/app.js
+p = Path("/app/app.js")
+s = p.read_text()
 
-RUN rm -rf /app/node_modules/youtube-dl \
- && mkdir -p /app/node_modules/youtube-dl/bin \
- && printf '#!/bin/sh\nexec /usr/local/bin/yt-dlp "$@"\n' > /app/node_modules/youtube-dl/bin/youtube-dl \
- && chmod +x /app/node_modules/youtube-dl/bin/youtube-dl
+old = "const youtubedl = require('youtube-dl');"
+
+new = r"""
+const { execFile } = require('child_process');
+
+const youtubedl = {
+    exec: function(url, args, callback) {
+        execFile('yt-dlp', [...args, url], callback);
+    }
+};
+"""
+
+if old not in s:
+    raise Exception("youtube-dl import not found")
+
+p.write_text(s.replace(old, new))
+PY
 
 RUN yt-dlp --version
